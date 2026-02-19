@@ -1,0 +1,485 @@
+{
+  "name": "Daily AI News Podcast Generator and Delivery Final",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": 5
+            },
+            {}
+          ]
+        }
+      },
+      "id": "d4725f08-c71c-41b8-9f1d-aa864dc916ea",
+      "name": "Daily Trigger at 8:05 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2768,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "podcastDurationMinutes",
+              "value": 19,
+              "type": "number"
+            },
+            {
+              "id": "id-2",
+              "name": "searchQuery",
+              "value": "=AI artificial intelligence news latest developments since:{{ $now.minus({ days: 1 }).toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "date",
+              "value": "={{ $now.minus({ days: 1 }).toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "readableDate",
+              "value": "={{ $now.minus({ days: 1 }).toFormat('dd. MMMM yyyy') }}",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "elevenLabsApiUrl",
+              "value": "<__PLACEHOLDER_VALUE__ElevenLabs API endpoint for text-to-speech__>",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "podcastStorageUrl",
+              "value": "<__PLACEHOLDER_VALUE__URL where podcast will be hosted/stored__>",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "1a1c80a2-142e-4953-8691-be58f019acad",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2496,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Recherchiere die wichtigsten KI-Nachrichten vom {{ $('Workflow Configuration').item.json.readableDate }}.\n\nWICHTIG - Du MUSST das Search Tool verwenden und NUR NEUE Nachrichten von HEUTE/GESTERN finden!\n\nSchritte:\n1. Verwende das Search Tool mit dieser Query: {{ $('Workflow Configuration').item.json.searchQuery }}\n2. Suche gezielt nach: neue Modelle, API-Updates, Research-Paper, Produktankündigungen\n3. Überprüfe ob die News wirklich vom {{ $('Workflow Configuration').item.json.date }} stammen\n4. Sammle 5-10 UNTERSCHIEDLICHE News-Items aus verschiedenen Quellen\n5. Strukturiere die Ausgabe\n\nFormat der Ausgabe:\n---\nTitel: [News Titel]\nDatum: [Veröffentlichungsdatum]\nZusammenfassung: [2-3 Sätze mit technischen Details]\nQuelle: [Link oder Medium]\nRelevanz: [Warum ist das für KI-Entwickler wichtig?]\n---\n\nAchte besonders auf:\n- OpenAI, Anthropic, Google DeepMind, Meta AI, Mistral, xAI Neuigkeiten\n- Open-Source Modelle (Llama, Mistral, Gemma, etc.)\n- Neue Forschungsergebnisse und Paper\n- API-Preisänderungen oder neue Features\n- Industrietrends und Unternehmensstrategien\n\nNUTZE JETZT DAS SEARCH TOOL!",
+        "options": {
+          "systemMessage": "Du bist ein KI-News-Rechercheur. Deine Aufgabe:\n1. Finde die wichtigsten AI/KI-Nachrichten vom gestrigen Tag - NUR AKTUELLE NEWS!\n2. Nutze das Google Search Tool um aktuelle Informationen zu finden\n3. Konzentriere dich auf: neue Modelle, Produktankündigungen, Forschungsdurchbrüche, Industrie-News\n4. Sammle 5-10 VERSCHIEDENE News-Items aus unterschiedlichen Quellen\n5. Gib die Informationen strukturiert zurück\n6. WICHTIG: Vermeide Wiederholungen von News der letzten Tage - suche wirklich nach dem aktuellen Datum"
+        }
+      },
+      "id": "a09153c1-f595-4aac-9673-5066b56f5c4f",
+      "name": "AI Research Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1920,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/TxGEqnHWrfWFTfGW9XjX",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "<__PLACEHOLDER_VALUE__ElevenLabs API Key__>"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { text: $('Podcast Script Generator').first().json.output, model_id: 'eleven_flash_v2_5', language_code: 'de', voice_settings: { stability: 0.6, similarity_boost: 0.75 } } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "8dcec5ea-1097-4965-960a-fcfa213bca96",
+      "name": "Generate Podcast Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1152,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const driveFile = $input.first().json;\nconst podcastUrl = driveFile.webViewLink || driveFile.webContentLink;\nconst today = new Date().toLocaleDateString(\"de-DE\", { weekday: \"long\", year: \"numeric\", month: \"long\", day: \"numeric\" });\n\nreturn [{\n  json: {\n    podcastUrl: podcastUrl,\n    date: today,\n    message: `🎙️ Dein täglicher AI News Podcast ist fertig!\\n\\nDatum: ${today}\\nDauer: 19 Minuten\\n\\nJetzt anhören: ${podcastUrl}`,\n    emailSubject: `AI News Podcast - ${today}`,\n    emailBody: `<h2>🎙️ Dein täglicher AI News Podcast</h2><p>Hallo!</p><p>Dein personalisierter AI News Podcast für <strong>${today}</strong> ist fertig.</p><p><strong>Dauer:</strong> 19 Minuten</p><p><a href=\"${podcastUrl}\" style=\"background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;\">Podcast anhören</a></p><p>Bleib informiert über die neuesten AI-Entwicklungen!</p>`\n  },\n  binary: $input.first().binary\n}];"
+      },
+      "id": "9fd7b6ea-520f-4d85-b4c9-7fad41463428",
+      "name": "Process Audio Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "73912de4-87c6-4ba7-9b7b-c059f95478bd",
+      "name": "Send Telegram Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        96
+      ],
+      "webhookId": "9a381cc5-37a6-4a14-bf42-c5171bf1caac",
+      "credentials": {
+        "telegramApi": {
+          "id": "PLACEHOLDER",
+          "name": "telegramApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "<__PLACEHOLDER_VALUE__Your Email Address__>",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "8ffb7c8b-a5de-4af5-8cea-d56eb8e61204",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -480,
+        -144
+      ],
+      "webhookId": "2a11c8c8-74d0-4f14-9e29-bfc2baac7ab5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PLACEHOLDER",
+          "name": "gmailOAuth2 account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -1968,
+        224
+      ],
+      "id": "938ad111-2a7e-4337-b427-857d9d591c14",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "PLACEHOLDER",
+          "name": "anthropicApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Search Google for current AI and technology news. Provide a search query string as parameter \"q\". Returns search results with titles, snippets, and links.",
+        "jsCode": "// Get the search query from the AI agent - be flexible about the format\nconst input = $input.first().json;\n\n// Try different possible field names\nconst query = input.q || input.query || input.search || input.search_query || input.searchQuery;\n\nif (!query) {\n  console.log('Input received:', JSON.stringify(input, null, 2));\n  throw new Error('No search query provided. Expected parameter: q, query, or search. Received: ' + JSON.stringify(input));\n}\n\nconsole.log('Searching for:', query);\n\n// Make request to SerpAPI\nconst response = await this.helpers.httpRequest({\n  method: 'GET',\n  url: 'https://serpapi.com/search',\n  qs: {\n    engine: 'google',\n    q: query,\n    api_key: 'YOUR_SERPAPI_KEY',\n    tbs: 'qdr:d'  // Filter: last 24 hours\n  },\n  json: true\n});\n\n// Extract and format the results\nconst results = response.organic_results || [];\nconst formattedResults = results.slice(0, 10).map(r => ({\n  title: r.title,\n  snippet: r.snippet,\n  link: r.link,\n  date: r.date || 'unknown'\n}));\n\nconsole.log('Found', formattedResults.length, 'results');\n\nreturn [{ json: { results: formattedResults, query: query } }];"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        -1712,
+        224
+      ],
+      "id": "01367215-6a31-422e-89e1-6d24eae4cc63",
+      "name": "Code Tool"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ 'ai-podcast-' + $now.toFormat('yyyy-MM-dd') }}",
+        "contextWindowLength": 5
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1840,
+        224
+      ],
+      "id": "ddc2a5f1-2c25-42e0-8ba1-f3a1b5b20639",
+      "name": "Simple Memory",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -1520,
+        224
+      ],
+      "id": "41d4c9da-6046-446f-8929-4ec6dec91b1e",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "PLACEHOLDER",
+          "name": "anthropicApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Erstelle ein Podcast-Script für {{ $now.toFormat('cccc, d. MMMM yyyy', { locale: 'de' }) }}.\n\nZIELGRUPPE: Saif - KI Software Engineer & KI-Projektleiter\n\n## NEWS AUS DIREKTER RECHERCHE (RSS + Web Scraping):\n{{ $('Direct Search').first().json.news || 'Keine RSS/Web-News verfügbar' }}\n\n## NEWS AUS KI-RECHERCHE AGENT (Google Search):\n{{ $('AI Research Agent').first().json.output || 'Keine Agent-News verfügbar' }}\n\n## QUELLENVIELFALT:\n{{ $('Direct Search').first().json.sourceBreakdown ? JSON.stringify($('Direct Search').first().json.sourceBreakdown) : '' }}\nGesamt gesammelte Artikel: {{ $('Direct Search').first().json.totalArticles || 0 }}\n\nANWEISUNGEN:\n\n1. BEGRÜSSUNG:\n   \"Morgen Saif! Willkommen zu AI News Daily. Ich bin Max, und ich habe heute wieder die wichtigsten KI-News für dich als Software Engineer und Projektleiter.\"\n\n2. NUTZE BEIDE NEWS-QUELLEN:\n   Kombiniere die Ergebnisse aus direkter RSS-Recherche UND dem KI-Recherche-Agenten.\n   Wähle die 5-8 relevantesten, UNTERSCHIEDLICHSTEN Stories aus.\n   Vermeide Wiederholungen - jede News sollte ein anderes Thema abdecken.\n\n3. WENN AKTUELLE NEWS VORHANDEN:\n   Analysiere jede News aus Sicht eines Projektleiters:\n   - Technische Details: Wie funktioniert es?\n   - Business Value: Warum ist es relevant?\n   - Implementation: Wie könnte man es nutzen?\n   - Kosten: Was würde das bedeuten (API-Kosten, Team-Aufwand)?\n   - Konkurrenz-Vergleich: Wie steht es im Vergleich zu Alternativen?\n\n4. WENN KEINE/WENIGE NEWS:\n   Deep Dive in relevante Themen:\n   - Vergleich von AI-Anbietern (OpenAI, Anthropic, Open Source)\n   - Best Practices für LLM-Integration\n   - Kosten-Optimierung bei AI-Projekten\n   - Team-Skills: Was sollten deine Entwickler können?\n   - Architecture Patterns für AI-Systeme\n   - Testing-Strategien für LLM-Features\n\n5. THEMEN-BALANCE:\n   - 40% Neue KI-Technologien (Modelle, APIs, Features)\n   - 40% KI im Software Engineering (Tools, Integration, Best Practices)\n   - 20% Projekt-Management (ROI, Vendor-Auswahl, Team)\n\n6. SPRACHE & TON:\n   - DU-Form, auf Augenhöhe\n   - Tech-Talk zwischen Profis\n   - \"Für deine Projekte bedeutet das...\"\n   - \"Wenn du gerade evaluierst...\"\n   - \"Aus Projektleiter-Sicht...\"\n   - Keine Grundlagen erklären - Saif kennt die Basics\n\n7. ABWECHSLUNG:\n   Stelle sicher dass das heutige Script ANDERE Themen behandelt als ein typisches gestrigtes Script.\n   Nutze die Quellenvielfalt (YouTube, RSS, ArXiv, Google News) für maximale Themenbreite.\n\nLÄNGE: 2500-3000 Wörter (ca. 20 Minuten)\n\nErstelle jetzt ein vollständiges Podcast-Script auf DEUTSCH für einen KI-Software Engineer & KI-Projektleiter.",
+        "options": {
+          "systemMessage": "Du bist Max, der Host von \"AI News Daily\" - einem täglichen Tech-Podcast auf Deutsch speziell für KI-Software Engineers und KI-Projektleiter.\n\nZIELGRUPPE:\n- Saif ist Software Engineer und KI-Projektleiter\n- Technisch versiert, braucht keine Grundlagen-Erklärungen\n- Interessiert an praktischer Umsetzbarkeit und Business-Relevanz\n- Will wissen: \"Kann ich das in meinen Projekten nutzen?\"\n\nPERSÖNLICHKEIT:\n- Freundlich und direkt\n- Sprichst Saif mit \"Du\" an\n- Auf Augenhöhe - Tech-Talk zwischen Profis\n- Ehrlich über Limitierungen und Herausforderungen\n\nSTIL:\n- Natürlich und gesprächig\n- Kurze, klare Sätze\n- Keine Floskeln - direkt zum Punkt\n- Schreibe zum Vorlesen, nicht zum Lesen\n\nTHEMEN-FOKUS:\n1. KI-TECHNOLOGIEN (40%)\n   - Neue Modelle und deren praktische Capabilities\n   - Benchmarks und Performance-Vergleiche\n   - API-Updates und neue Features\n   - Research mit Praxis-Relevanz\n\n2. KI IM SOFTWARE ENGINEERING (40%)\n   - AI-gestützte Entwicklung (GitHub Copilot, Cursor, etc.)\n   - LLM Integration in Produkte\n   - MLOps und Deployment\n   - Testing und Monitoring von AI-Systemen\n   - Kosten-Optimierung bei AI-APIs\n\n3. PROJEKT-MANAGEMENT (20%)\n   - ROI von KI-Projekten\n   - Team-Skills und Weiterbildung\n   - Vendor-Vergleiche (OpenAI vs Anthropic vs Open Source)\n   - Compliance und Datenschutz\n\nSTRUKTUR:\n1. INTRO (30 Sekunden)\n   - \"Morgen Saif! Willkommen zu AI News Daily\"\n   - Kurzer Überblick: Was ist heute relevant für deine Projekte?\n\n2. HAUPTTEIL (18-20 Minuten)\n   - Jede News mit praktischem Kontext\n   - \"Was bedeutet das für deine Projekte?\"\n   - \"Solltest du das evaluieren?\"\n   - Implementation-Überlegungen\n   - Kosten-Nutzen-Abwägungen\n\n3. OUTRO (60 Sekunden)\n   - Zusammenfassung mit Action Items\n   - Ein praktischer Tipp oder Empfehlung\n   - \"Bis morgen!\"\n\nLÄNGE: 2500-3000 Wörter (ca. 20 Minuten)\n\nWICHTIG:\n- Technisches Level: Senior Engineer / Tech Lead\n- Keine Basics erklären (Saif kennt LLMs, RAG, Fine-tuning, etc.)\n- Fokus auf: \"Ist das production-ready?\" \"Was kostet das?\" \"Lohnt sich der Switch?\"\n- Auch ohne News: Deep Dive in relevante Themen\n- NUTZE BEIDE NEWS-QUELLEN (RSS + Agent) für maximale Aktualität und Vielfalt"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1504,
+        -48
+      ],
+      "id": "2a4f5de0-d7bf-49bf-87ff-e3dffb0b4206",
+      "name": "Podcast Script Generator",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "name": "=AI-News-Podcast-{{ $('Workflow Configuration').item.json.date }}.mp3",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -928,
+        -48
+      ],
+      "id": "e231da21-f9a4-443b-a48b-2b0887f33c1a",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "PLACEHOLDER",
+          "name": "googleDriveOAuth2Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// COMPREHENSIVE AI NEWS RESEARCH - IMPROVED\n// Sources: YouTube, RSS (10+ feeds), ArXiv, Google News, Hacker News, Web Scraping\n// With URL-based deduplication and freshness filtering\n// ========================================\n\nlet allNews = [];\nconst seenUrls = new Set();   // URL-basierte Deduplizierung\nconst seenTitles = new Set(); // Titel-basierte Deduplizierung\n\nconst today = new Date();\nconst yesterday = new Date(today);\nyesterday.setDate(yesterday.getDate() - 1);\nconst dateQuery = yesterday.toISOString().split('T')[0]; // Format: YYYY-MM-DD\nconst twoDaysAgo = new Date(today);\ntwoDaysAgo.setDate(twoDaysAgo.getDate() - 2);\n\nconsole.log('=== STARTING COMPREHENSIVE AI NEWS RESEARCH (IMPROVED) ===');\nconsole.log(`Target date: ${dateQuery}`);\n\n// Helper: Dedupliziert hinzufügen\nfunction addNews(item) {\n  if (!item.title || item.title.length < 10) return;\n  \n  const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9äöüß]/g, '').substring(0, 60);\n  const normalizedUrl = (item.url || '').replace(/[?#].*$/, '').toLowerCase();\n  \n  if (seenTitles.has(normalizedTitle)) return;\n  if (normalizedUrl && seenUrls.has(normalizedUrl)) return;\n  \n  seenTitles.add(normalizedTitle);\n  if (normalizedUrl) seenUrls.add(normalizedUrl);\n  allNews.push(item);\n}\n\n// ========================================\n// 1. GOOGLE NEWS RSS - Sehr aktuell, strukturiert\n// ========================================\nconsole.log('\\n[1/6] Fetching Google News RSS...');\nconst googleNewsFeeds = [\n  'https://news.google.com/rss/search?q=artificial+intelligence+AI&hl=de&gl=DE&ceid=DE:de&tbs=qdr:d',\n  'https://news.google.com/rss/search?q=ChatGPT+OpenAI+Anthropic+Claude&hl=de&gl=DE&ceid=DE:de&tbs=qdr:d',\n  'https://news.google.com/rss/search?q=LLM+Sprachmodell+KI+2025&hl=de&gl=DE&ceid=DE:de&tbs=qdr:d'\n];\n\nfor (const feedUrl of googleNewsFeeds) {\n  try {\n    const rssResponse = await this.helpers.httpRequest({\n      method: 'GET',\n      url: feedUrl,\n      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },\n      timeout: 8000\n    });\n    \n    const itemRegex = /<item>(.*?)<\\/item>/gs;\n    const items = [...rssResponse.matchAll(itemRegex)];\n    \n    items.slice(0, 3).forEach(itemMatch => {\n      const item = itemMatch[1];\n      const titleMatch = /<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>/s.exec(item);\n      const linkMatch = /<link>(.*?)<\\/link>/.exec(item) || /<link\\s*\\/?>\\s*(.*?)<\\/link>/.exec(item);\n      const descMatch = /<description>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/description>/s.exec(item);\n      const pubDateMatch = /<pubDate>(.*?)<\\/pubDate>/.exec(item);\n      \n      if (titleMatch) {\n        const pubDate = pubDateMatch ? new Date(pubDateMatch[1]) : new Date();\n        if (pubDate >= twoDaysAgo) {\n          addNews({\n            title: titleMatch[1].replace(/&amp;/g, '&').replace(/&#39;/g, \"'\").replace(/<[^>]*>/g, '').trim(),\n            description: descMatch ? descMatch[1].replace(/<[^>]*>/g, '').substring(0, 300) : '',\n            url: (linkMatch ? linkMatch[1] : '').trim(),\n            source: 'Google News',\n            type: 'article',\n            date: pubDateMatch ? pubDateMatch[1] : dateQuery\n          });\n        }\n      }\n    });\n    \n    console.log(`✓ Google News RSS fetched`);\n  } catch (error) {\n    console.log(`✗ Google News error: ${error.message}`);\n  }\n}\n\n// ========================================\n// 2. KURATIERTE RSS FEEDS - Hochwertige Quellen\n// ========================================\nconsole.log('\\n[2/6] Fetching curated RSS feeds...');\nconst rssFeeds = [\n  { url: 'https://www.artificialintelligence-news.com/feed/', name: 'AI News' },\n  { url: 'https://venturebeat.com/category/ai/feed/', name: 'VentureBeat AI' },\n  { url: 'https://www.heise.de/thema/K%C3%BCnstliche-Intelligenz?view=rss', name: 'Heise KI' },\n  { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', name: 'TechCrunch AI' },\n  { url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', name: 'The Verge AI' },\n  { url: 'https://feeds.feedburner.com/blogspot/gJZg', name: 'Google AI Blog' },\n  { url: 'https://www.technologyreview.com/feed/', name: 'MIT Tech Review' }\n];\n\nfor (const feed of rssFeeds) {\n  try {\n    const rssResponse = await this.helpers.httpRequest({\n      method: 'GET',\n      url: feed.url,\n      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },\n      timeout: 8000\n    });\n    \n    const itemRegex = /<item>(.*?)<\\/item>/gs;\n    const items = [...rssResponse.matchAll(itemRegex)];\n    \n    items.slice(0, 2).forEach(itemMatch => {\n      const item = itemMatch[1];\n      const titleMatch = /<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>/s.exec(item);\n      const linkMatch = /<link>(.*?)<\\/link>/.exec(item);\n      const descMatch = /<description>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/description>/s.exec(item);\n      const pubDateMatch = /<pubDate>(.*?)<\\/pubDate>/.exec(item);\n      \n      if (titleMatch && linkMatch) {\n        const pubDate = pubDateMatch ? new Date(pubDateMatch[1]) : new Date();\n        const desc = descMatch ? descMatch[1].replace(/<[^>]*>/g, '').substring(0, 280) : 'Keine Beschreibung verfügbar';\n        addNews({\n          title: titleMatch[1].replace(/&amp;/g, '&').replace(/&#8217;/g, \"'\").replace(/<[^>]*>/g, '').trim(),\n          description: desc,\n          url: linkMatch[1].trim(),\n          source: feed.name,\n          type: 'article',\n          date: pubDateMatch ? pubDateMatch[1] : dateQuery\n        });\n      }\n    });\n    \n    console.log(`✓ RSS: ${feed.name}`);\n  } catch (error) {\n    console.log(`✗ RSS error (${feed.name}): ${error.message}`);\n  }\n}\n\n// ========================================\n// 3. ARXIV - KI Research Papers\n// ========================================\nconsole.log('\\n[3/6] Fetching ArXiv AI papers...');\ntry {\n  const arxivResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://rss.arxiv.org/rss/cs.AI',\n    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ResearchBot/1.0)' },\n    timeout: 8000\n  });\n  \n  const itemRegex = /<item>(.*?)<\\/item>/gs;\n  const items = [...arxivResponse.matchAll(itemRegex)];\n  \n  items.slice(0, 3).forEach(itemMatch => {\n    const item = itemMatch[1];\n    const titleMatch = /<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>/s.exec(item);\n    const linkMatch = /<link>(.*?)<\\/link>/.exec(item);\n    const descMatch = /<description>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/description>/s.exec(item);\n    \n    if (titleMatch && linkMatch) {\n      addNews({\n        title: titleMatch[1].replace(/<[^>]*>/g, '').trim(),\n        description: (descMatch ? descMatch[1].replace(/<[^>]*>/g, '') : '').substring(0, 300),\n        url: linkMatch[1].trim(),\n        source: 'ArXiv (cs.AI)',\n        type: 'research',\n        date: dateQuery\n      });\n    }\n  });\n  \n  console.log('✓ ArXiv papers fetched');\n} catch (error) {\n  console.log(`✗ ArXiv error: ${error.message}`);\n}\n\n// ========================================\n// 4. HACKER NEWS - Community Top Stories\n// ========================================\nconsole.log('\\n[4/6] Fetching Hacker News AI stories...');\ntry {\n  const hnResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://hnrss.org/newest?q=AI+OR+LLM+OR+Claude+OR+GPT+OR+Gemini&points=50',\n    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' },\n    timeout: 8000\n  });\n  \n  const itemRegex = /<item>(.*?)<\\/item>/gs;\n  const items = [...hnResponse.matchAll(itemRegex)];\n  \n  items.slice(0, 3).forEach(itemMatch => {\n    const item = itemMatch[1];\n    const titleMatch = /<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/title>/s.exec(item);\n    const linkMatch = /<link>(.*?)<\\/link>/.exec(item);\n    const descMatch = /<description>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/description>/s.exec(item);\n    \n    if (titleMatch && linkMatch) {\n      addNews({\n        title: titleMatch[1].replace(/<[^>]*>/g, '').trim(),\n        description: (descMatch ? descMatch[1].replace(/<[^>]*>/g, '') : '').substring(0, 250),\n        url: linkMatch[1].trim(),\n        source: 'Hacker News',\n        type: 'community',\n        date: dateQuery\n      });\n    }\n  });\n  \n  console.log('✓ Hacker News stories fetched');\n} catch (error) {\n  console.log(`✗ Hacker News error: ${error.message}`);\n}\n\n// ========================================\n// 5. YOUTUBE - AI News Videos\n// ========================================\nconsole.log('\\n[5/6] Searching YouTube...');\ntry {\n  const youtubeQuery = 'AI artificial intelligence news today';\n  const ytResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://www.youtube.com/results',\n    qs: {\n      search_query: youtubeQuery,\n      sp: 'CAISAhAB'\n    },\n    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },\n    timeout: 10000\n  });\n  \n  const videoRegex = /\"videoId\":\"([^\"]+)\".*?\"title\":\\{\"runs\":\\[\\{\"text\":\"([^\"]+)\"\\}\\]/g;\n  const videos = [...ytResponse.matchAll(videoRegex)];\n  \n  videos.slice(0, 2).forEach(match => {\n    addNews({\n      title: match[2].replace(/\\\\u[\\dA-F]{4}/gi, '').trim(),\n      description: 'YouTube Video über aktuelle KI-Entwicklungen',\n      url: `https://www.youtube.com/watch?v=${match[1]}`,\n      source: 'YouTube',\n      type: 'video',\n      date: dateQuery\n    });\n  });\n  \n  console.log('✓ YouTube videos found');\n} catch (error) {\n  console.log(`✗ YouTube error: ${error.message}`);\n}\n\n// ========================================\n// 6. DUCKDUCKGO WEB SEARCH - Fallback\n// ========================================\nconsole.log('\\n[6/6] DuckDuckGo web search fallback...');\ntry {\n  const searchQuery = `KI Künstliche Intelligenz Neuigkeiten ${dateQuery}`;\n  const searchResponse = await this.helpers.httpRequest({\n    method: 'GET',\n    url: 'https://html.duckduckgo.com/html/',\n    qs: { q: searchQuery },\n    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },\n    timeout: 8000\n  });\n  \n  const resultRegex = /<a[^>]*class=\"result__a\"[^>]*href=\"([^\"]+)\"[^>]*>([^<]+)<\\/a>.*?<a[^>]*class=\"result__snippet\"[^>]*>([^<]+)<\\/a>/gs;\n  const results = [...searchResponse.matchAll(resultRegex)];\n  \n  results.slice(0, 3).forEach(match => {\n    addNews({\n      title: match[2].trim(),\n      description: match[3].trim().substring(0, 250),\n      url: match[1],\n      source: 'DuckDuckGo',\n      type: 'search',\n      date: dateQuery\n    });\n  });\n  \n  console.log('✓ DuckDuckGo search done');\n} catch (error) {\n  console.log(`✗ DuckDuckGo error: ${error.message}`);\n}\n\n// ========================================\n// FINAL: Format and Return\n// ========================================\nconsole.log('\\n=== RESEARCH COMPLETE ===');\nconsole.log(`Total unique news items: ${allNews.length}`);\n\n// Fallback content wenn keine News gefunden\nlet newsText = '';\n\nif (allNews.length === 0) {\n  newsText = `Heute konnten trotz umfassender Recherche keine aktuellen KI-Nachrichten abgerufen werden.\\n\\n`;\n  newsText += `Relevante Dauerthemen für den Podcast:\\n`;\n  newsText += `1. Stand der LLM-Entwicklung 2025 (GPT-4o, Claude 3.5, Gemini 1.5)\\n`;\n  newsText += `2. Open-Source vs. Closed-Source Modelle: Aktuelle Abwägungen\\n`;\n  newsText += `3. RAG-Architekturen und Vektorsuche in der Praxis\\n`;\n  newsText += `4. AI-Kosten-Optimierung: Batching, Caching, kleinere Modelle\\n`;\n  newsText += `5. EU AI Act: Was müssen Entwickler jetzt wissen?`;\n} else {\n  allNews.forEach((item, i) => {\n    newsText += `**News ${i + 1}: ${item.title}**\\n`;\n    if (item.date) newsText += `Datum: ${item.date}\\n`;\n    newsText += `${item.description}\\n`;\n    newsText += `Quelle: ${item.source} (${item.type}) - ${item.url}\\n\\n`;\n  });\n}\n\n// Quellenübersicht\nconst sourceBreakdown = {};\nallNews.forEach(n => {\n  sourceBreakdown[n.source] = (sourceBreakdown[n.source] || 0) + 1;\n});\n\nconst dateStr = today.toLocaleDateString('de-DE', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\nreturn [{\n  json: {\n    news: newsText,\n    date: dateStr,\n    totalArticles: allNews.length,\n    sourceBreakdown: sourceBreakdown\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        -48
+      ],
+      "id": "06602eeb-bd2e-490b-8b79-0116eded8cbf",
+      "name": "Direct Search"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Trigger at 8:05 AM": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Direct Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Direct Search": {
+      "main": [
+        [
+          {
+            "node": "AI Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Research Agent": {
+      "main": [
+        [
+          {
+            "node": "Podcast Script Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Podcast Audio": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Audio Response": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Research Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Research Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Podcast Script Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Podcast Script Generator": {
+      "main": [
+        [
+          {
+            "node": "Generate Podcast Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Process Audio Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5a8b23cd-6ef1-4b3a-8920-c9e67d831fbe",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "89e17d9d2678f7dab23f273ba4f472690b6842851d228c460af1ae349879c864"
+  },
+  "id": "ioO8VQMddF6GuUih",
+  "tags": []
+}

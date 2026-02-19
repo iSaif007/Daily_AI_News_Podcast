@@ -142,6 +142,51 @@ Before making public, verify:
 4. **Engage Community**: Answer issues promptly
 5. **Regular Updates**: Add new features, sources
 
+## 🔧 Prozess-Verbesserungen (v2.0)
+
+### Problem: Immer die gleichen Nachrichten
+**Ursache:** Session-Key im Memory-Buffer war statisch (`"ai-podcast-2025"`).
+**Fix:** Jetzt datums-basierter Key (`"ai-podcast-2025-01-15"`) - jeder Tag startet mit frischem Kontext.
+
+### Problem: AI Research Agent wurde ignoriert
+**Ursache:** Der Podcast Script Generator las nur `Direct Search`, nicht den Research Agent.
+**Fix:** Beide Quellen werden jetzt an den Script Generator übergeben und kombiniert.
+
+### Verbesserung: Neue & bessere News-Quellen
+| Quelle | Neu? | Beschreibung |
+|--------|------|--------------|
+| Google News RSS | ✅ Neu | Sehr aktuell, 3 verschiedene Query-Varianten |
+| ArXiv (cs.AI) | ✅ Neu | Wissenschaftliche KI-Paper |
+| Hacker News | ✅ Neu | Community-kuratierte Tech-Stories (min. 50 Punkte) |
+| The Verge AI | ✅ Neu | Großes Tech-Medienhaus |
+| MIT Technology Review | ✅ Neu | Hochwertige Tech-Analysen |
+| VentureBeat AI | Vorhanden | Startup & Enterprise AI |
+| Heise KI | Vorhanden | Deutsche KI-News |
+| TechCrunch AI | Vorhanden | Startup-News |
+| YouTube | Vorhanden | Heute-Filter verbessert |
+| DuckDuckGo | Vorhanden | Fallback-Suche |
+| Nitter/Twitter | ❌ Entfernt | Oft offline/geblockt |
+
+### Verbesserung: Stärkere Deduplizierung
+- **Vorher:** Nur Titel-basiert (einfache Normalisierung)
+- **Nachher:** URL-basiert + Titel-basiert (doppelte Absicherung)
+- Frischheits-Filter: Nur News der letzten 48 Stunden
+
+### Verbesserung: Workflow-Reihenfolge korrigiert
+```
+Alt:  Direct Search ──┐
+                       ├──► Podcast Script Generator (nur Direct Search genutzt)
+      AI Research ─────┘
+
+Neu:  Direct Search ──► AI Research Agent ──► Podcast Script Generator
+                                               (nutzt BEIDE Quellen)
+```
+
+### Verbesserung: SerpAPI mit 24h-Filter
+Neue Parameter `tbs: 'qdr:d'` sorgt dafür, dass nur News der letzten 24 Stunden zurückgegeben werden.
+
+---
+
 ## 🎉 Congratulations!
 
 Your project is ready for GitHub! This is:
@@ -150,6 +195,7 @@ Your project is ready for GitHub! This is:
 - ✅ Easy to set up
 - ✅ Secure (no secrets exposed)
 - ✅ Community-friendly
+- ✅ Täglich frische, abwechslungsreiche News (v2.0)
 
 Good luck with your open-source project! 🚀
 
